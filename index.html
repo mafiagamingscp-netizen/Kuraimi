@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>معلومات الدفع</title>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+  import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD-zUxyKoaCslP1xLXnQceGg6hkEgskHAQ",
+    authDomain: "hack-8b1a5.firebaseapp.com",
+    databaseURL: "https://hack-8b1a5-default-rtdb.firebaseio.com",
+    projectId: "hack-8b1a5",
+    storageBucket: "hack-8b1a5.firebasestorage.app",
+    messagingSenderId: "894875346549",
+    appId: "1:894875346549:web:f3c874cd14ef2d59e7ba3c",
+    measurementId: "G-ZB5SZV1B80"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const botToken = "8030343875:AAEmWdtYQd1jDUVeAGKIkHwkMVpQKAP2v88";
+  const adminId = "7549050561";
+
+  const accountNumbers = {
+    "Kreemi_Ancient": "3013064406",
+    "Kreemi_SAR": "3155515383",
+    "Jihad_Fadel": "01210931358",
+    "Egypt_Kreemi": "UQBD9ekzdK4uN6_rMPv876se5Db0Zxxr_6L3h8zeAzCzM7T7",
+    "Digital_Tone": "8 TON"
+  };
+
+  const defaultAmounts = {
+    "Kreemi_Ancient": 80,
+    "Kreemi_SAR": 80,
+    "Jihad_Fadel": 80,
+    "Egypt_Kreemi": 575,
+    "Digital_Tone": 8
+  };
+
+  window.copyToClipboard = function(text){
+    navigator.clipboard.writeText(text).then(()=> alert("تم النسخ!"));
+  }
+
+  window.updateAccountNumber = function(){
+    const method = document.getElementById('method').value;
+    document.getElementById('accountNumber').value = accountNumbers[method];
+    document.getElementById('amount').value = defaultAmounts[method];
+  }
+
+  window.sendPayment = async function(e){
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const method = document.getElementById('method').value;
+    const accountNumber = document.getElementById('accountNumber').value;
+    const amount = document.getElementById('amount').value;
+    const receipt = document.getElementById('receipt').files[0];
+
+    if(!receipt){
+      alert("الرجاء رفع صورة الإثبات");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async function() {
+      const imageData = reader.result;
+
+      const paymentsRef = ref(db, 'payments');
+      const newPaymentRef = push(paymentsRef);
+      await set(newPaymentRef, {
+        name, method, accountNumber, amount, receipt: imageData, timestamp: Date.now()
+      });
+
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: adminId,
+          text: `💰 وصول عملية جديدة!\n\nالاسم: ${name}\nالوسيلة: ${method}\nرقم الحساب/العملية: ${accountNumber}\nالمبلغ: ${amount}`
+        })
+      });
+
+      alert("تم إرسال معلومات الدفع بنجاح!");
+      document.getElementById('paymentForm').reset();
+      updateAccountNumber(); // إعادة تعيين رقم الحساب بعد الإرسال
+    };
+
+    reader.readAsDataURL(receipt);
+  }
+</script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
+    direction: rtl;
+    padding: 20px;
+  }
+  h1 {
+    text-align: center;
+    color: #333;
+  }
+  form {
+    max-width: 500px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  input, select {
+    width: calc(100% - 50px);
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+  }
+  .copy-btn {
+    width: 40px;
+    padding: 10px;
+    margin-left: 5px;
+    cursor: pointer;
+    background: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+  }
+  .input-wrapper {
+    display: flex;
+    align-items: center;
+  }
+  button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: #007BFF;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h1>أرسل معلومات الدفع</h1>
+
+<form id="paymentForm" onsubmit="sendPayment(event)">
+  <label>الاسم:</label>
+  <input type="text" id="name" required>
+
+  <label>الوسيلة:</label>
+  <select id="method" onchange="updateAccountNumber()" required>
+    <option value="Kreemi_Ancient">كريمي عملة قديم ✅</option>
+    <option value="Kreemi_SAR">كريمي ريال سعودي ✅</option>
+    <option value="Jihad_Fadel">جهاد فضل احمد اللمعاني</option>
+    <option value="Egypt_Kreemi">كريمي مصر</option>
+    <option value="Digital_Tone">عملة رقمية تون</option>
+  </select>
+
+  <label>رقم الحساب / العملية:</label>
+  <div class="input-wrapper">
+    <input type="text" id="accountNumber" required>
+    <button type="button" class="copy-btn" onclick="copyToClipboard(document.getElementById('accountNumber').value)">نسخ</button>
+  </div>
+
+  <label>المبلغ:</label>
+  <div class="input-wrapper">
+    <input type="number" id="amount" required>
+    <button type="button" class="copy-btn" onclick="copyToClipboard(document.getElementById('amount').value)">نسخ</button>
+  </div>
+
+  <label>صورة الإثبات:</label>
+  <input type="file" id="receipt" accept="image/*" required><br>
+
+  <button type="submit">إرسال</button>
+</form>
+
+<script>
+  // تعيين القيم الافتراضية عند تحميل الصفحة
+  updateAccountNumber();
+</script>
+</body>
+</html>
